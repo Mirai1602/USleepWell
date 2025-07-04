@@ -11,6 +11,12 @@
             "actividad": "actividad 1",
             "inicio": "12:00:00",
             "fin": "14:30:00"
+        },
+        {
+            "fecha": "2025-07-04",
+            "actividad": "actividad 2",
+            "inicio": "00:00:00",
+            "fin": "03:00:00"
         }
     ]
 }

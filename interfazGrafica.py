@@ -107,6 +107,57 @@ recomendaciones_trastornos = {
     ]
 }
 
+#------------------------------ CALCULAR SIESTAS -----------------------------
+def sugerir_siestas(df_acts, ciclos_faltantes):
+    if ciclos_faltantes <= 0:
+        st.info("¡Felicidades! No necesitas siestas adicionales hoy.")
+        return
+
+    # Filtrar actividades del día actual
+    hoy = pd.Timestamp.today().normalize()
+    acts_hoy = df_acts[df_acts['fecha'] == hoy]
+    if acts_hoy.empty:
+        # Si no hay actividades, sugerir siesta en cualquier momento razonable
+        st.info("No tienes actividades registradas hoy. Puedes tomar una siesta cuando lo desees, preferiblemente entre 13:00 y 16:00.")
+        return
+
+    # Ordenar actividades por hora de inicio
+    acts_hoy = acts_hoy.sort_values('inicio')
+    sugerencias = []
+    # Convertir horas a datetime para comparar
+    acts_hoy['inicio_dt'] = pd.to_datetime(acts_hoy['inicio'], format="%H:%M:%S")
+    acts_hoy['fin_dt'] = pd.to_datetime(acts_hoy['fin'], format="%H:%M:%S")
+
+    # Buscar huecos entre actividades
+    for i in range(len(acts_hoy) - 1):
+        fin_actual = acts_hoy.iloc[i]['fin_dt']
+        inicio_siguiente = acts_hoy.iloc[i+1]['inicio_dt']
+        hueco = (inicio_siguiente - fin_actual).total_seconds() / 60
+        if hueco >= 30:
+            # Sugerir siesta media hora después de terminar la actividad actual
+            sugerencias.append(fin_actual + pd.Timedelta(minutes=30))
+            if len(sugerencias) >= ciclos_faltantes:
+                break
+
+    # También considerar antes de la primera actividad y después de la última
+    primer_inicio = acts_hoy.iloc[0]['inicio_dt']
+    if (primer_inicio - pd.to_datetime("07:00:00")).total_seconds() / 60 >= 30:
+        sugerencias.insert(0, primer_inicio - pd.Timedelta(minutes=30))
+    ultimo_fin = acts_hoy.iloc[-1]['fin_dt']
+    if (pd.to_datetime("22:00:00") - ultimo_fin).total_seconds() / 60 >= 30:
+        sugerencias.append(ultimo_fin + pd.Timedelta(minutes=30))
+
+    # Limitar sugerencias a los ciclos faltantes
+    sugerencias = sugerencias[:ciclos_faltantes]
+
+    if sugerencias:
+        st.info("Te sugerimos tomar siestas en los siguientes horarios:")
+        for s in sugerencias:
+            st.markdown(f"- {s.strftime('%H:%M')}")
+    else:
+        st.warning("No hay espacios disponibles hoy para sugerir una siesta sin interferir con tus actividades.")
+
+
 # ----------------------------- INTERFACES -----------------------------
 def pagina_inicio():
     st.title("😴 Bienvenido a SleepWell")
@@ -194,6 +245,7 @@ def pagina_principal():
         if ciclos_dormidos < 7:
             st.warning("No completaste los ciclos de sueño ideales. Aquí tienes algunas sugerencias de siesta:")
             # Sugerencias de siesta
+            sugerir_siestas(df_acts, 7 - ciclos_dormidos)
 
         st.header("💡 Recomendaciones")
         recomendaciones = recomendaciones_generales.copy()
