@@ -1,0 +1,16 @@
+{
+    "Me\u00f1a\u00f1i": [
+        {
+            "fecha": "2025-07-04",
+            "actividad": "actividad 1",
+            "inicio": "12:00:00",
+            "fin": "14:30:00"
+        },
+        {
+            "fecha": "2025-07-04",
+            "actividad": "actividad 1",
+            "inicio": "12:00:00",
+            "fin": "14:30:00"
+        }
+    ]
+}
