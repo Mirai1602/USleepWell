@@ -1,8 +1,64 @@
 from datetime import datetime
 from DatosActividad import  DocCSV
 from DatosActividad import ActividadesUsuario
-
 import csv
+def EditarActividad():
+   print("Hola, Bienvenido al menu de edición de actividades.")
+   FechaOpcion= input("Ingresa la fecha exacta de la actividad que deseas editar (DD/MM/AAAA): ").strip().capitalize()
+   ActSecundaria = []
+   with open("ActividadesUsuario.csv", mode = 'r' , encoding = "UTF-8") as f: 
+      reader = csv.reader(f) 
+      encabezado = next(reader)  # Leer el encabezado
+      for fila in reader:
+         if fila[2] == FechaOpcion:  # Verificar si la fecha coincide con el día seleccionado dependiendo del dia que le pongamos 
+            ActSecundaria.append(fila)  # Agregar la fila a la lista si coincide
+      print(f"Estas son las actividades del dia: {FechaOpcion}")
+      for i, acti in enumerate(ActSecundaria):  #Controlo la actividad que e va mostrando, la recorro i es el num de actividad
+         print(f"{i+1}. {acti[1]} a la(s) {acti[3]} que dura {acti[4]} minutos")  
+         #Va a mostrar todas las actividades del dia que le ponga, y las tuquea en acti
+      try:
+            index = int(input("¿Cuál actividad deseas editar? (Ingresa el numero): ")) - 1 #Pide el numero de actividad que quiere editar
+            Seleccion = ActSecundaria[index]  #Selecciona la actividad que el usuario quiere editar
+      except ValueError:
+            print("Por favor, ingresa un número válido.")
+            return
+      campos = ["Hora de levantarse (HH:MM)", "Actividad", "fecha", "Hora", "Duracion (min)"]
+      print("Puedes editar cualquiera de los siguientes datos (Iniciando desde el 0):")
+      for i, campo in enumerate(campos): #La quite el uno para que las opciones coincidancon el numero ingresado
+          print(f"{i}. {campo}")
+      try:
+          # Pide el campo que quiere editar
+          index2 = int(input("¿Qué campo deseas editar? (0-4): "))
+          if index2 == 0: 
+              nuevoValor = input(f"Nuevo nombre {Seleccion[1]}: ").strip() or Seleccion[1] 
+              Seleccion[1] = nuevoValor  # Actualiza el nombre de la actividad
+              #Si no se escribe nada, se deja el valor que ya tiene
+          if index2==1:
+              nuevoValor = input(f"Nuevo fecha {Seleccion[2]}: ").strip() or Seleccion[2]
+              Seleccion[2] = nuevoValor  # Actualiza la fecha de la actividad
+          if index2==2:
+              nuevoValor = input(f"Nueva hora {Seleccion[3]}:").strip() or Seleccion[3]
+              Seleccion[3] = nuevoValor  # Actualiza la hora de la actividad
+          if index2 ==3:
+              nuevoValor = input(f"Nueva duracion de la actividad {Seleccion[4]}: ").strip() or Seleccion[4]
+              Seleccion[4] = nuevoValor  # Actualiza la duración de la actividad
+      except ValueError:
+          print("Por favor, ingresa un número válido de opcion de los campos.")
+          return
+      #Leemos el contenido
+      with open("ActividadesUsuario.csv", mode = 'r', encoding="UTF-8") as f:
+          cont = list(csv.reader(f))  # Lee el contenido del archivo CSV lo convierto a lista 
+      #Escribimos en el conteido en el CSV
+      with open("ActividadesUsuario.csv", mode = 'w', newline='', encoding="UTF-8") as f:
+          writer = csv.writer(f)
+          writer.writerow(encabezado)
+          for fila in cont[1:]: #Slide notation: Del uno en adelante, para no incluir el encabezado
+              if fila[2] != FechaOpcion:
+                  writer.writerow(fila)  # Escribe las filas que no coinciden con el día
+          for fila in ActSecundaria:
+             writer.writerow(fila)  #Guarda la actividad o mas bien la escribe si la fecha coincide 
+
+      print("Tu actividad ha sido editada!")
 def RegistrarAgenda():
     SemanaUsuario = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"]
     doc = DocCSV("ActividadesUsuario.csv", ["Hora de levantarse (HH:MM)","Actividad", "Fecha", "Hora", "Duración (min)"]) #Encabezados del csv
