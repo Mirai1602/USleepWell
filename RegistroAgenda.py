@@ -2,6 +2,45 @@ from datetime import datetime
 from DatosActividad import  DocCSV
 from DatosActividad import ActividadesUsuario
 import csv
+def EliminarActividad():
+    print("\n Menú de eliminación de actividades")
+    fecha_objetivo = input("Ingresa la fecha exacta de la actividad que deseas eliminar (DD/MM/AAAA): ").strip()
+
+    actividades = []
+    with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
+        reader = csv.reader(f)
+        encabezado = next(reader)
+        for fila in reader:
+            if fila[2] == fecha_objetivo:
+                actividades.append(fila)
+    if not actividades:
+        print(f" No se encontraron actividades para {fecha_objetivo}.")
+        return
+    print(f"\nActividades registradas para {fecha_objetivo}:")
+    for i, act in enumerate(actividades):
+        print(f"{i + 1}. {act[1]} a las {act[3]} ({act[4]} min)")
+
+    try:
+        index = int(input("¿Cuál actividad deseas eliminar? (Número): ")) - 1
+        if index < 0 or index >= len(actividades):
+            print("⚠️ Número fuera de rango.")
+            return
+        actividad_eliminada = actividades.pop(index)
+    except ValueError:
+        print("⚠️ Entrada inválida.")
+        
+        with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
+            contenido = list(csv.reader(f))
+
+    # Reescribir el archivo sin la actividad eliminada
+    with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(encabezado)
+        for fila in contenido[1:]:
+            if fila != actividad_eliminada:
+                writer.writerow(fila)
+    
+    print(f" Actividad '{actividad_eliminada[1]}' eliminada exitosamente.")
 def EditarActividad():
    print("Hola, Bienvenido al menu de edición de actividades.")
    FechaOpcion= input("Ingresa la fecha exacta de la actividad que deseas editar (DD/MM/AAAA): ").strip().capitalize()
