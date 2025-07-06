@@ -23,11 +23,11 @@ def EliminarActividad():
     try:
         index = int(input("¿Cuál actividad deseas eliminar? (Número): ")) - 1
         if index < 0 or index >= len(actividades):
-            print("⚠️ Número fuera de rango.")
+            print(" Número fuera de rango.")
             return
         actividad_eliminada = actividades.pop(index)
     except ValueError:
-        print("⚠️ Entrada inválida.")
+        print(" Entrada inválida.")
         
         with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
             contenido = list(csv.reader(f))
