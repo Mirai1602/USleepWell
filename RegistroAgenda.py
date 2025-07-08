@@ -30,14 +30,18 @@ def EliminarActividad():
         actividad_eliminada = actividades.pop(index)
     except ValueError:
         print(" Entrada inválida.")
-        
-        with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
-            contenido = list(csv.reader(f))
+        return
+
+    with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
+        contenido = list(csv.reader(f))
 
     # Reescribir el archivo sin la actividad eliminada
     with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(encabezado)
+        if len(contenido) <= 1:
+            print(" El archivo CSV no tiene actividades registradas para eliminar.")
+            return
         for fila in contenido[1:]:
             if fila != actividad_eliminada:
                 writer.writerow(fila)
@@ -97,14 +101,15 @@ def EditarActividad():
       with open("ActividadesUsuario.csv", mode = 'r', encoding="UTF-8") as f:
           cont = list(csv.reader(f))  # Lee el contenido del archivo CSV lo convierto a lista 
       #Escribimos en el conteido en el CSV
-      with open("ActividadesUsuario.csv", mode = 'w', newline='', encoding="UTF-8") as f:
-          writer = csv.writer(f)
-          writer.writerow(encabezado)
-          for fila in cont[1:]: #Slide notation: Del uno en adelante, para no incluir el encabezado
-              if fila[2] != FechaOpcion:
-                  writer.writerow(fila)  # Escribe las filas que no coinciden con el día
-          for fila in ActSecundaria:
-             writer.writerow(fila)  #Guarda la actividad o mas bien la escribe si la fecha coincide 
+      with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
+        writer = csv.writer(f)
+        writer.writerow(encabezado)
+         if len(contenido) <= 1:
+            print(" El archivo CSV no tiene actividades registradas para eliminar.")
+            return
+        for fila in contenido[1:]:
+            if fila != actividad_eliminada:
+                writer.writerow(fila)
 
       print("Tu actividad ha sido editada!")
       opcion2= input("¿Deseas editar otra actividad? (s/n): ").strip().lower()
