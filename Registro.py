@@ -86,5 +86,6 @@ def RegistrarUsuario():
    
 print("Registro exitoso!")
 
-RegistrarUsuario()
-
+if __name__ == "__main__":
+    print("Registro exitoso!")
+    RegistrarUsuario()

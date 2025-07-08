@@ -23,11 +23,11 @@ def MenuPrincipal():
         elif opcion == "2":
             usuario = IniciarSesion()
             if usuario:
-                MenUsuario(usuario["ID"], usuario["Nombre"])
+                MenUsuario(usuario["id"], usuario["nombre"])
         elif opcion == "3":
             print("👋 ¡Hasta luego!")
             break
         else:
             print("❌ Opción inválida. Intenta de nuevo.")
-
-MenuPrincipal()
+if __name__ == "__main__":
+    MenuPrincipal()

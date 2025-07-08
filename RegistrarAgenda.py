@@ -48,11 +48,6 @@ def EliminarActividad():
     
     print(f" Actividad '{actividad_eliminada[1]}' eliminada exitosamente.")
 
-
-
-
-
-
 def EditarActividad():
    print("Hola, Bienvenido al menu de edición de actividades.")
    print("*"*50)
@@ -104,7 +99,7 @@ def EditarActividad():
       with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(encabezado)
-         if len(contenido) <= 1:
+        if len(contenido) <= 1:
             print(" El archivo CSV no tiene actividades registradas para eliminar.")
             return
         for fila in contenido[1:]:
@@ -121,7 +116,6 @@ def EditarActividad():
 
       #Estructura de eliminar actividad
 
-  
 
 def RegistrarAgenda():
     SemanaUsuario = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"]
@@ -152,8 +146,6 @@ def RegistrarAgenda():
            print(f"Duración: {duracion_actividad} minutos")
           #Adicion para saber si el user quiere regitrar otra actividad
         
- 
-          
            other = input("¿Deseas registrar otra actividad? (s/n): ").strip().lower() 
           #convierte a minusculas para evitarnos validaciones
            if other != 's':   
@@ -167,8 +159,6 @@ def RegistrarAgenda():
             OpcionEliminar = input("¿Deseas eliminar alguna actividad registrada? (s/n): ").strip().lower()
             if OpcionEliminar == 's':
                 EliminarActividad()
-
-
 
 def ConsultaAgenda(): #Se encarga de ver los huecos para determinar las siestas, pero las siestas no se calcula aqui
      LapsoDisponibles = []
@@ -200,4 +190,5 @@ def ConsultaAgenda(): #Se encarga de ver los huecos para determinar las siestas,
                         LapsoDisponibles.append((fecha, actual.strftime("%H:%M"), FinDia.strftime("%H:%M"), lapso))  # Guarda el lapso libre hasta el fin del día
                         #Para que luego lo podamos leer, lo agrega a esa lista temporal
      return LapsoDisponibles  # Retorna la lista de lapsos disponibles para siestas
-RegistrarAgenda() 
+if __name__ == "__main__":
+    RegistrarAgenda() 

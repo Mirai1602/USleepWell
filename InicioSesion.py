@@ -24,3 +24,5 @@ def IniciarSesion(archivo= "DatosUsuarios.csv"):
     print("ID de usuario no encontrado. Por favor, verifica tu ID e intenta nuevamente.")
     return None # No se encontro el usuario
 # Llamada a la funcion para iniciar sesion
+if __name__ == "__main__":
+    IniciarSesion()
