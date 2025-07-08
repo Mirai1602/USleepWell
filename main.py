@@ -1,3 +1,3 @@
-from PrimeraEntra import MenuPrincipal
+from MenuPrincipal import MenuPrincipal
 def main():
     MenuPrincipal()

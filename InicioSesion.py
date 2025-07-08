@@ -1,7 +1,7 @@
 import csv
 import os
 
-def InciarSesion(archivo= "DatosUsuarios.csv"):
+def IniciarSesion(archivo= "DatosUsuarios.csv"):
     print("*" *40)
     print("Inicio de sesion en USleepWell")
     print("*" *40)
@@ -23,4 +23,4 @@ def InciarSesion(archivo= "DatosUsuarios.csv"):
                 return row
     print("ID de usuario no encontrado. Por favor, verifica tu ID e intenta nuevamente.")
     return None # No se encontro el usuario
-InciarSesion() # Llamada a la funcion para iniciar sesion
+# Llamada a la funcion para iniciar sesion
