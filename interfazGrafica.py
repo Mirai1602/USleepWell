@@ -4,7 +4,7 @@ import os
 import random
 import datetime
 import pandas as pd
-import matplotlib.pyplot as plt
+import csv
 
 # Archivos de almacenamiento local
 USERS_FILE = "usuarios.json"
@@ -107,11 +107,15 @@ recomendaciones_trastornos = {
     ]
 }
 
-#------------------------------ CALCULAR SIESTAS -----------------------------
+# ----------------------------- CALCULAR SIESTAS -----------------------------
 def sugerir_siestas(df_acts, ciclos_faltantes):
     if ciclos_faltantes <= 0:
         st.info("¡Felicidades! No necesitas siestas adicionales hoy.")
         return
+    
+    # Definir rango razonable para siestas
+    hora_min = pd.to_datetime("07:00:00")
+    hora_max = pd.to_datetime("18:00:00")
 
     # Filtrar actividades del día actual
     hoy = pd.Timestamp.today().normalize()
@@ -132,62 +136,102 @@ def sugerir_siestas(df_acts, ciclos_faltantes):
     for i in range(len(acts_hoy) - 1):
         fin_actual = acts_hoy.iloc[i]['fin_dt']
         inicio_siguiente = acts_hoy.iloc[i+1]['inicio_dt']
-        hueco = (inicio_siguiente - fin_actual).total_seconds() / 60
-        if hueco >= 30:
-            # Sugerir siesta media hora después de terminar la actividad actual
-            sugerencias.append(fin_actual + pd.Timedelta(minutes=30))
-            if len(sugerencias) >= ciclos_faltantes:
-                break
+            # Sugerir siesta de 30 minutos justo después de la actividad actual
+        posible_inicio = max(fin_actual + pd.Timedelta(minutes=1), hora_min)
+        posible_fin = posible_inicio + pd.Timedelta(minutes=30)
+        while posible_fin <= min(inicio_siguiente, hora_max):
+            if (inicio_siguiente - posible_inicio).total_seconds() / 60 >= 30:
+                sugerencias.append((posible_inicio, posible_fin))
+                if len(sugerencias) >= ciclos_faltantes:
+                    break
+            posible_inicio += pd.Timedelta(minutes=1)
+            posible_fin = posible_inicio + pd.Timedelta(minutes=30)
+        if len(sugerencias) >= ciclos_faltantes:
+            break
 
     # También considerar antes de la primera actividad y después de la última
     primer_inicio = acts_hoy.iloc[0]['inicio_dt']
-    if (primer_inicio - pd.to_datetime("07:00:00")).total_seconds() / 60 >= 30:
-        sugerencias.insert(0, primer_inicio - pd.Timedelta(minutes=30))
+    siesta_fin = primer_inicio - pd.Timedelta(minutes=1)
+    siesta_inicio = siesta_fin - pd.Timedelta(minutes=30)
+    if (primer_inicio - hora_min).total_seconds() / 60 >= 30 and hora_min <= siesta_inicio <= hora_max and hora_min <= siesta_fin <= hora_max:
+        sugerencias.insert(0, (siesta_inicio, siesta_fin))
+
+    #Después de la última actividad
     ultimo_fin = acts_hoy.iloc[-1]['fin_dt']
-    if (pd.to_datetime("22:00:00") - ultimo_fin).total_seconds() / 60 >= 30:
-        sugerencias.append(ultimo_fin + pd.Timedelta(minutes=30))
+    siesta_inicio = ultimo_fin + pd.Timedelta(minutes=30)
+    siesta_fin = siesta_inicio + pd.Timedelta(minutes=30)
+    if (hora_max - ultimo_fin).total_seconds() / 60 >= 30 and hora_min <= siesta_inicio <= hora_max and hora_min <= siesta_fin <= hora_max:
+        sugerencias.append((siesta_inicio, siesta_fin))
 
     # Limitar sugerencias a los ciclos faltantes
     sugerencias = sugerencias[:ciclos_faltantes]
 
     if sugerencias:
         st.info("Te sugerimos tomar siestas en los siguientes horarios:")
-        for s in sugerencias:
-            st.markdown(f"- {s.strftime('%H:%M')}")
+        for inicio, fin in sugerencias:
+            st.markdown(f"- De {inicio.strftime('%H:%M')} a {fin.strtime('%H:%M')}")
     else:
         st.warning("No hay espacios disponibles hoy para sugerir una siesta sin interferir con tus actividades.")
 
 
 # ----------------------------- INTERFACES -----------------------------
+
+def GenerarID():
+    return random.randint(1000, 9999)
+
+
 def pagina_inicio():
-    st.title("😴 Bienvenido a SleepWell")
+    st.title("🌙 Bienvenido a SleepWell")
     st.markdown("Una forma inteligente de mejorar tu descanso")
 
-    opcion = st.radio("", ["Iniciar sesión", "Registrarse"])
+    opcion = st.radio("¿Qué deseas hacer?", ["Iniciar sesión", "Registrarse"], horizontal=True)
+    st.write("")
 
     if opcion == "Iniciar sesión":
-        usuario = st.text_input("Usuario")
-        contraseña = st.text_input("Contraseña", type="password")
-        if st.button("Entrar"):
-            if usuario in usuarios and usuarios[usuario]["contraseña"] == contraseña:
-                st.session_state.usuario_actual = usuario
-                st.success("Inicio de sesión exitoso")
-                st.session_state.pagina = "principal"
-            else:
-                st.error("Usuario o contraseña incorrectos")
+        st.subheader("🔑Iniciar sesión")
+
+        archivo = "DatosUsuarios.csv"
+
+        if not os.path.exists(archivo):
+            st.error("No hay usuarios registrados. Por favor, regístrate primero.")
+            return None
+        else:
+            id_usuario = st.text_input("ID de usuario", placeholder="Ingresa tu ID de usuario")
+
+            if not id_usuario.isdigit():
+                st.error("El ID de usuario debe ser un número")
+                return None
+            with open(archivo, "r", newline='', encoding='utf-8') as file:
+                reader = csv.DictReader(file)
+                for row in reader:
+                    if row["ID"] == id_usuario:
+                        st.session_state.usuario_actual = row["Nombre"]
+                        st.session_state.pagina = "principal"
+                        st.success(f"Bienvenido, {st.session_state.usuario_actual}!")
+                        return row
+                    else:
+                        st.error("ID de usuario no encontrado. Por favor, verifica tu ID.")
+        if "usuario_actual" in st.session_state and st.session_state.usuario_actual:
+            st.success(f"Ya has iniciado sesión como {st.session_state.usuario_actual}.")
 
     elif opcion == "Registrarse":
-        nuevo_usuario = st.text_input("Nuevo usuario")
-        nueva_contraseña = st.text_input("Contraseña", type="password")
+        st.subheader("📝 Crear cuenta")
+        nuevo_usuario = st.text_input("Nombre", placeholder="¿Cómo te llamas?")
+        gmail_usuario = st.text_input("Correo electrónico", placeholder="Ingresa tu correo electrónico")
         trastorno = st.selectbox("¿Padeces algún trastorno del sueño?", ["Ninguno", "Insomnio", "Apnea", "Narcolepsia", "Sonambulismo", "Sindrome de piernas inquietas", "Terrores nocturnos", "Parálisis del sueño", "Trastorno del ritmo circadiano", "Hipersomnia idiopática"])
         edad = st.slider("Edad", 10, 100, 25)
         if st.button("Crear cuenta"):
+            if not nuevo_usuario or not gmail_usuario:
+                st.error("Todos los campos son obligatorios")
+            if not gmail_usuario.endswith("@gmail.com"):
+                    st.error("El correo electrónico debe ser de Gmail")
             if nuevo_usuario in usuarios:
                 st.error("El usuario ya existe")
             else:
-                usuarios[nuevo_usuario] = {"contraseña": nueva_contraseña, "trastorno": trastorno, "edad": edad}
+                id_usuario = GenerarID()
+                usuarios[nuevo_usuario] = {"gmail":gmail_usuario, "trastorno": trastorno, "edad": edad, "id": id_usuario}
                 guardar_datos(USERS_FILE, usuarios)
-                st.success("Cuenta creada con éxito, ahora inicia sesión") 
+                st.success("Cuenta creada con éxito, ahora inicia sesión")
 
 
 def pagina_principal():
@@ -200,14 +244,17 @@ def pagina_principal():
     if menu == "Registrar Actividad":
         st.header("📅 Añadir actividad diaria")
         fecha = st.date_input("Fecha")
-        actividad = st.text_input("Actividad")
+        actividad = st.text_input("Actividad", placeholder="Ejemplo: Estudiar, Hacer ejercicio, Leer")
         inicio = st.time_input("Hora de inicio")
         fin = st.time_input("Hora de fin")
 
         if st.button("Guardar actividad"):
-            actividades.setdefault(usuario, []).append({"fecha": str(fecha), "actividad": actividad, "inicio": str(inicio), "fin": str(fin)})
-            guardar_datos(ACTIVITIES_FILE, actividades)
-            st.success("Actividad guardada correctamente")
+            if not actividad or not inicio or not fin:
+                st.error("Todos los campos son obligatorios")
+            else:
+                actividades.setdefault(usuario, []).append({"fecha": str(fecha), "actividad": actividad, "inicio": str(inicio), "fin": str(fin)})
+                guardar_datos(ACTIVITIES_FILE, actividades)
+                st.success("Actividad guardada correctamente")
 
     elif menu == "Registrar Sueño":
         st.header("🛌 Registrar horas de sueño")
@@ -221,7 +268,7 @@ def pagina_principal():
             st.success("Sueño registrado correctamente")
 
     elif menu == "Calendario y Recomendaciones":
-        st.header("📆 Vista semanal de actividades")
+        st.header("📆 Bienvenido a la gestión de actividades de USleepWell!")
 
         df_acts = pd.DataFrame(actividades.get(usuario, []))
         df_acts['fecha'] = pd.to_datetime(df_acts['fecha'])
@@ -235,10 +282,11 @@ def pagina_principal():
             for _, row in df_sueños.iterrows():
                 t1 = datetime.datetime.strptime(row['dormir'], "%H:%M:%S")
                 t2 = datetime.datetime.strptime(row['despertar'], "%H:%M:%S")
+                #calcula cuánto se durmió
                 if t2 < t1:
                     t2 += datetime.timedelta(days=1)
-                duracion = (t2 - t1).total_seconds() / 60
-                ciclos_dormidos += int(duracion // 90)
+                duracion = (t2 - t1).total_seconds() / 60 #calcula la diferencia de horas, lo convierte a segundos y finalmente a minutos
+                ciclos_dormidos += int(duracion // 90) #toma el total de minutos y lo divide por 90 para obtener los ciclos completos
 
         st.bar_chart(pd.DataFrame({"Ciclos": [ciclos_dormidos, 7 - ciclos_dormidos]}, index=["Completados", "Faltantes"]))
 
@@ -248,7 +296,6 @@ def pagina_principal():
             sugerir_siestas(df_acts, 7 - ciclos_dormidos)
 
         st.header("💡 Recomendaciones")
-        recomendaciones = recomendaciones_generales.copy()
         trastorno = usuarios[usuario].get("trastorno")
         if trastorno in recomendaciones_trastornos:
             recomendaciones += recomendaciones_trastornos[trastorno]
@@ -263,3 +310,4 @@ if st.session_state.pagina == "inicio":
     pagina_inicio()
 elif st.session_state.pagina == "principal":
     pagina_principal()
+    recomendaciones = recomendaciones_generales.copy()

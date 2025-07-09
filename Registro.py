@@ -56,5 +56,4 @@ def ValidarDatos(nombre, apellido, Nacimiento, email): #Usa el operador not porq
             email = input("Por favor, ingresa tu correo electronico: ")
 print("Registro exitoso!")
 
-
 RegistrarUsuario()

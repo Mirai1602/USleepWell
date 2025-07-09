@@ -18,5 +18,21 @@
             "inicio": "00:00:00",
             "fin": "03:00:00"
         }
+    ],
+    "Waza": [
+        {
+            "fecha": "2025-07-04",
+            "actividad": "actividad 1",
+            "inicio": "10:14:00",
+            "fin": "10:14:00"
+        }
+    ],
+    "usuario1": [
+        {
+            "fecha": "2025-07-04",
+            "actividad": "actividad1",
+            "inicio": "12:04:00",
+            "fin": "15:45:00"
+        }
     ]
 }

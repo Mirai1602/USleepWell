@@ -1,7 +1,9 @@
 {
-    "Me\u00f1a\u00f1i": {
-        "contrase\u00f1a": "12345678",
-        "trastorno": "insomnio",
-        "edad": 17
+    "usuario1": {
+        "gmail": "correoprueba@gmail.com",
+        "contrase\u00f1a": "123456",
+        "trastorno": "Insomnio",
+        "edad": 17,
+        "id": 5502
     }
 }
