@@ -4,8 +4,10 @@ from DatosActividad import ActividadesUsuario
 from collections import defaultdict
 #Esa bendita libreria esta buena para agrupar las actividades y crea intervalos como diccionarios
 import csv
-def EliminarActividad():
-    print("\n Menú de eliminación de actividades")
+import csv
+
+def EliminarActividad(id):
+    print("\n🗑️ Menú de eliminación de actividades")
     fecha_objetivo = input("Ingresa la fecha exacta de la actividad que deseas eliminar (DD/MM/AAAA): ").strip()
 
     actividades = []
@@ -13,113 +15,123 @@ def EliminarActividad():
         reader = csv.reader(f)
         encabezado = next(reader)
         for fila in reader:
-            if fila[2] == fecha_objetivo:
+            if fila[0] == str(id) and fila[3] == fecha_objetivo:
                 actividades.append(fila)
+
     if not actividades:
-        print(f" No se encontraron actividades para {fecha_objetivo}.")
+        print(f"📭 No se encontraron actividades para {fecha_objetivo}.")
         return
-    print(f"\nActividades registradas para {fecha_objetivo}:")
+
+    print(f"\n📋 Actividades registradas para {fecha_objetivo}:")
     for i, act in enumerate(actividades):
-        print(f"{i + 1}. {act[1]} a las {act[3]} ({act[4]} min)")
+        print(f"{i + 1}. {act[2]} a las {act[4]} ({act[5]} min)")
 
     try:
         index = int(input("¿Cuál actividad deseas eliminar? (Número): ")) - 1
         if index < 0 or index >= len(actividades):
-            print(" Número fuera de rango.")
+            print("❌ Número fuera de rango.")
             return
-        actividad_eliminada = actividades.pop(index)
+        actividad_eliminada = actividades[index]
     except ValueError:
-        print(" Entrada inválida.")
+        print("❌ Entrada inválida.")
         return
 
     with open("ActividadesUsuario.csv", mode='r', encoding='utf-8') as f:
         contenido = list(csv.reader(f))
 
-    # Reescribir el archivo sin la actividad eliminada
     with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(encabezado)
-        if len(contenido) <= 1:
-            print(" El archivo CSV no tiene actividades registradas para eliminar.")
-            return
         for fila in contenido[1:]:
             if fila != actividad_eliminada:
                 writer.writerow(fila)
-    
-    print(f" Actividad '{actividad_eliminada[1]}' eliminada exitosamente.")
 
-def EditarActividad():
-   print("Hola, Bienvenido al menu de edición de actividades.")
-   print("*"*50)
-   FechaOpcion= input("Ingresa la fecha exacta de la actividad que deseas editar (DD/MM/AAAA): ").strip().capitalize()
-   ActSecundaria = []
-   with open("ActividadesUsuario.csv", mode = 'r' , encoding = "UTF-8") as f: 
-      reader = csv.reader(f) 
-      encabezado = next(reader)  # Leer el encabezado
-      for fila in reader:
-         if fila[2] == FechaOpcion:  # Verificar si la fecha coincide con el día seleccionado dependiendo del dia que le pongamos 
-            ActSecundaria.append(fila)  # Agregar la fila a la lista si coincide
-      print(f"Estas son las actividades del dia: {FechaOpcion}")
-      for i, acti in enumerate(ActSecundaria):  #Controlo la actividad que e va mostrando, la recorro i es el num de actividad
-         print(f"{i+1}. {acti[1]} a la(s) {acti[3]} que dura {acti[4]} minutos")  
-         #Va a mostrar todas las actividades del dia que le ponga, y las tuquea en acti
-      try:
-            index = int(input("¿Cuál actividad deseas editar? (Ingresa el numero): ")) - 1 #Pide el numero de actividad que quiere editar
-            Seleccion = ActSecundaria[index]  #Selecciona la actividad que el usuario quiere editar
-      except ValueError:
-            print("Por favor, ingresa un número válido.")
+    print(f"✅ Actividad '{actividad_eliminada[2]}' eliminada exitosamente.")
+
+
+
+import csv
+from RegistroAgenda import EliminarActividad  # Asegúrate de que no cause recursión circular
+
+def EditarActividad(id):
+    print("\n📝 Menú de edición de actividades")
+    print("*" * 50)
+    fecha_objetivo = input("Ingresa la fecha exacta de la actividad que deseas editar (DD/MM/AAAA): ").strip()
+
+    actividades = []
+    with open("ActividadesUsuario.csv", mode='r', encoding="utf-8") as f:
+        reader = csv.reader(f)
+        encabezado = next(reader)
+        for fila in reader:
+            if fila[0] == str(id) and fila[3] == fecha_objetivo:
+                actividades.append(fila)
+
+    if not actividades:
+        print(f"📭 No se encontraron actividades para {fecha_objetivo}.")
+        return
+
+    print(f"\n📋 Actividades registradas para {fecha_objetivo}:")
+    for i, act in enumerate(actividades):
+        print(f"{i + 1}. {act[2]} a las {act[4]} ({act[5]} min)")
+
+    try:
+        index = int(input("¿Cuál actividad deseas editar? (Número): ")) - 1
+        if index < 0 or index >= len(actividades):
+            print("❌ Número fuera de rango.")
             return
-      campos = ["Hora de levantarse (HH:MM)", "Actividad", "fecha", "Hora", "Duracion (min)"]
-      print("Puedes editar cualquiera de los siguientes datos (Iniciando desde el 0):")
-      for i, campo in enumerate(campos): #La quite el uno para que las opciones coincidancon el numero ingresado
-          print(f"{i}. {campo}")
-      try:
-          # Pide el campo que quiere editar
-          index2 = int(input("¿Qué campo deseas editar? (0-4): "))
-          if index2 == 0: 
-              nuevoValor = input(f"Nuevo nombre {Seleccion[1]}: ").strip() or Seleccion[1] 
-              Seleccion[1] = nuevoValor  # Actualiza el nombre de la actividad
-              #Si no se escribe nada, se deja el valor que ya tiene
-          if index2==1:
-              nuevoValor = input(f"Nuevo fecha {Seleccion[2]}: ").strip() or Seleccion[2]
-              Seleccion[2] = nuevoValor  # Actualiza la fecha de la actividad
-          if index2==2:
-              nuevoValor = input(f"Nueva hora {Seleccion[3]}:").strip() or Seleccion[3]
-              Seleccion[3] = nuevoValor  # Actualiza la hora de la actividad
-          if index2 ==3:
-              nuevoValor = input(f"Nueva duracion de la actividad {Seleccion[4]}: ").strip() or Seleccion[4]
-              Seleccion[4] = nuevoValor  # Actualiza la duración de la actividad
-      except ValueError:
-          print("Por favor, ingresa un número válido de opcion de los campos.")
-          return
-      #Leemos el contenido
-      with open("ActividadesUsuario.csv", mode = 'r', encoding="UTF-8") as f:
-          cont = list(csv.reader(f))  # Lee el contenido del archivo CSV lo convierto a lista 
-      #Escribimos en el conteido en el CSV
-      with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
+        seleccion = actividades[index]
+    except ValueError:
+        print("❌ Entrada inválida.")
+        return
+
+    campos = ["Actividad", "Fecha", "Hora", "Duración (min)"]
+    campo_a_indice = {0: 2, 1: 3, 2: 4, 3: 5}
+
+    print("\nPuedes editar cualquiera de los siguientes campos:")
+    for i, campo in enumerate(campos):
+        print(f"{i}. {campo}")
+
+    try:
+        campo_index = int(input("¿Qué campo deseas editar? (0-3): "))
+        if campo_index not in campo_a_indice:
+            print("❌ Opción fuera de rango.")
+            return
+        nuevo_valor = input(f"Ingrese el nuevo valor para {campos[campo_index]}: ").strip()
+        if nuevo_valor:
+            seleccion[campo_a_indice[campo_index]] = nuevo_valor
+    except ValueError:
+        print("❌ Entrada inválida.")
+        return
+
+    # Reescribir el archivo con la actividad editada
+    with open("ActividadesUsuario.csv", mode='r', encoding="utf-8") as f:
+        contenido = list(csv.reader(f))
+
+    with open("ActividadesUsuario.csv", mode='w', newline='', encoding='utf-8') as f:
         writer = csv.writer(f)
         writer.writerow(encabezado)
-        if len(contenido) <= 1:
-            print(" El archivo CSV no tiene actividades registradas para eliminar.")
-            return
         for fila in contenido[1:]:
-            if fila != actividad_eliminada:
+            if fila == actividades[index]:
+                writer.writerow(seleccion)
+            else:
                 writer.writerow(fila)
 
-      print("Tu actividad ha sido editada!")
-      opcion2= input("¿Deseas editar otra actividad? (s/n): ").strip().lower()
-      if opcion2 == 's':
-          EditarActividad()
-      opcion3 = input("¿Deseas eliminar alguna actividad? (s/n): ").strip().lower()
-      if opcion3 == 's':
-          EliminarActividad()
+    print("✅ Tu actividad ha sido editada con éxito.")
 
-      #Estructura de eliminar actividad
+    opcion2 = input("¿Deseas editar otra actividad? (s/n): ").strip().lower()
+    if opcion2 == 's':
+        EditarActividad(id)
+
+    opcion3 = input("¿Deseas eliminar alguna actividad? (s/n): ").strip().lower()
+    if opcion3 == 's':
+        EliminarActividad(id)
+
+#Estructura de la funcioon editar actividad
 
 
-def RegistrarAgenda():
+def RegistrarAgenda(id):
     SemanaUsuario = ["Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"]
-    doc = DocCSV("ActividadesUsuario.csv", ["Hora de levantarse (HH:MM)","Actividad", "Fecha", "Hora", "Duración (min)"]) #Encabezados del csv
+    doc = DocCSV("ActividadesUsuario.csv", ["id", "Hora de levantarse (HH:MM)","Actividad", "Fecha", "Hora", "Duración (min)"]) #Encabezados del csv
     print("Bienvenido a la gestión de actividades de USleepWell!")
     print("Aqui registraremos tus actividades del dia a dia para crear una rutina")
     print("Piensa en todas las actividades que haces por cada dia de la semana, asi planificaremos tu rutina!")
@@ -133,7 +145,7 @@ def RegistrarAgenda():
            hora_actividad = input("Hora de la actividad (HH:MM): ")
            duracion_actividad = input("Duración de la actividad (en minutos): ")
 
-           objeto = ActividadesUsuario(Hora_levantar, nombre_actividad, fecha_actividad, hora_actividad, duracion_actividad)
+           objeto = ActividadesUsuario(id, Hora_levantar, nombre_actividad, fecha_actividad, hora_actividad, duracion_actividad)
         
            doc.guardar_fila(objeto.obtener_datos_csv())
 
@@ -145,7 +157,7 @@ def RegistrarAgenda():
            print(f"Hora: {hora_actividad}")
            print(f"Duración: {duracion_actividad} minutos")
           #Adicion para saber si el user quiere regitrar otra actividad
-        
+    
            other = input("¿Deseas registrar otra actividad? (s/n): ").strip().lower() 
           #convierte a minusculas para evitarnos validaciones
            if other != 's':   
@@ -171,7 +183,8 @@ def ConsultaAgenda(): #Se encarga de ver los huecos para determinar las siestas,
       # Agrupa actividades por fecha, creando una clave si aun no existe como si fuera un diccionario
              for fecha, actividades in ActPorFecha.items():
                  #Forma de manejar los elementos en un diccionario
-                 actividades.sort(key=lambda x: datetime.strptime(x[3], "%H:%M"))  # Ordena actividades por hora. Convierte texto a tipo date
+                 actividades = [a for a in actividades if a[4].strip()]  # Filtra filas con hora válida
+                 actividades.sort(key=lambda x: datetime.strptime(x[4], "%H:%M"))
                  #Se ordenan de la mas tardia a la mas temprana
                  actual = datetime.strptime("11:00", "%H:%M")  # Hora de inicio del día, para que solo nos cuente las horas libres apratir de ahi
                  FinDia= datetime.strptime("16:00" , "%H:%M")  # Hora de fin del día, para que solo nos cuente las horas libres hasta ahi
@@ -191,4 +204,7 @@ def ConsultaAgenda(): #Se encarga de ver los huecos para determinar las siestas,
                         #Para que luego lo podamos leer, lo agrega a esa lista temporal
      return LapsoDisponibles  # Retorna la lista de lapsos disponibles para siestas
 if __name__ == "__main__":
-    RegistrarAgenda() 
+    # Esta parte se ejecuta si el script se ejecuta directamente
+    print("Bienvenido al sistema de gestión de actividades de USleepWell!")
+if __name__ == "__main__":
+    RegistrarAgenda()

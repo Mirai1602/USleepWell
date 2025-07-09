@@ -19,7 +19,8 @@ class DuracionActividad:
     def __init__(self, duracion_actividad):
         self.duracion_actividad = duracion_actividad
 class ActividadesUsuario: #Esta clase reune los objetos anteriores
-    def __init__(self,  hora_levantar ,nombre_actividad, fecha_actividad, hora_actividad, duracion_actividad):
+    def __init__(self, id, hora_levantar ,nombre_actividad, fecha_actividad, hora_actividad, duracion_actividad):
+        self.id = id
         self.hora_levantar = HoraUserWakeUp(hora_levantar)
         self.nombre_actividad = NombreActividad(nombre_actividad) #Estan bien repetitivo los nombre
         #pero es para que se entienda que son objetos y me da miedo cambiarlo jaajaj
@@ -28,6 +29,7 @@ class ActividadesUsuario: #Esta clase reune los objetos anteriores
         self.duracion_actividad = DuracionActividad(duracion_actividad) #Mala practica pero aja
     def obtener_datos_csv(self):
         return [
+            self.id,  # ID del usuario
             self.hora_levantar.hora_levantar,  # Hora de levantarse Agregada 
             self.nombre_actividad.nombre_actividad,
             self.fecha_actividad.fecha_actividad,

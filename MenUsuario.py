@@ -1,29 +1,48 @@
-from RegistrarAgenda import RegistrarAgenda
+from RegistroAgenda import RegistrarAgenda
 from VerAgenda import MostrarActividades
-from Recomendaciones import VerRecomendaciones
-from Alarma import ProgramarAlarma
+from RutinaSleep import HorarioSleep
 
-def MenuUsuario(id, nombre):
+def MenUsuario(id, nombre_usuario):
     while True:
-        print(f"\n👤 Menú de {nombre}")
-        print("-" * 40)
+        print("\n" + "=" * 50)
+        print(f"👤 Bienvenido, {nombre_usuario} (ID: {id})")
+        print("Selecciona una opción:")
         print("1. Registrar actividad")
-        print("2. Ver mi agenda")
-        print("3. Programar alarma")
-        print("4. Ver recomendaciones")
-        print("5. Cerrar sesión")
-        opcion = input("Selecciona una opción: ")
+        print("2. Mostrar agenda")
+        print("3. Editar actividad")
+        print("4. Eliminar actividad")
+        print("5. Recomendaciones de siesta")
+        print("6. Recomendaciones de sueño nocturno")
+        print("0. Cerrar sesión")
+        opcion = input("Opción: ").strip()
 
         if opcion == "1":
             RegistrarAgenda(id)
         elif opcion == "2":
-            MostrarActividades(id)
+            MostrarActividades(id=id)
         elif opcion == "3":
-            ProgramarAlarma(id)
+            EditarActividad(id)
         elif opcion == "4":
-            VerRecomendaciones(id)
+            EliminarActividad(id)
         elif opcion == "5":
-            print("🔒 Sesión cerrada.")
+            lapsos = ConsultaAgenda()
+            siestas = FiltroDeLapsos(lapsos)
+            print("\n🛌 Recomendaciones de siesta:")
+            if siestas:
+                for fecha, ini, fin in siestas:
+                    print(f"📅 {fecha}: Siesta posible entre {ini} y {fin}")
+            else:
+                print("📭 No se encontraron lapsos ideales para siesta.")
+        elif opcion == "6":
+            recomendaciones = HorarioSleep(id)
+            print("\n🌙 Recomendaciones de sueño nocturno:")
+            if recomendaciones:
+                for r in recomendaciones:
+                    print(f"{r['dia']}: Dormir idealmente a las {r['dormir_ideal']} para levantarse a las {r['levantarse']}")
+            else:
+                print("📭 No se encontraron datos suficientes para calcular recomendaciones.")
+        elif opcion == "0":
+            print("👋 Cerrando sesión. ¡Hasta pronto!")
             break
         else:
-            print("❌ Opción inválida.")
+            print("❌ Opción inválida. Intenta de nuevo.")

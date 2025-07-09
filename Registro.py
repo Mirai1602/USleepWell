@@ -7,6 +7,8 @@ import os
 import random
 import csv
 from datetime import datetime
+from MenUsuario import MenUsuario
+
 
 def GenerarID(existentes):
     while True:
@@ -83,9 +85,7 @@ def RegistrarUsuario():
      print(f" Tu ID de usuario es: {id}")
      print("Registro exitoso!")
      GuardarDatos(nombre, apellido, Nacimiento, email, id) #Guarda los datos en el archivo
-   
-print("Registro exitoso!")
-
+     MenUsuario(str(id), nombre)
 if __name__ == "__main__":
-    print("Registro exitoso!")
-    RegistrarUsuario()
+    #RegistrarUsuario()
+    pass

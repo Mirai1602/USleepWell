@@ -1,5 +1,6 @@
 import csv
 import os
+from MenUsuario import MenUsuario
 
 def IniciarSesion(archivo= "DatosUsuarios.csv"):
     print("*" *40)
@@ -17,7 +18,6 @@ def IniciarSesion(archivo= "DatosUsuarios.csv"):
     with open(archivo, "r", newline='', encoding='utf-8') as file:
         reader = csv.DictReader(file)
         for row in reader:
-            print({list(row.keys())})
             if row['id'] == id_usuario:
                 print(f"Bienvenido, {row['nombre']} {row['apellido']}!")
                 return row
@@ -25,4 +25,6 @@ def IniciarSesion(archivo= "DatosUsuarios.csv"):
     return None # No se encontro el usuario
 # Llamada a la funcion para iniciar sesion
 if __name__ == "__main__":
-    IniciarSesion()
+    usuario = IniciarSesion()
+    if usuario:
+        MenUsuario(usuario["id"], usuario["nombre"])
