@@ -2,31 +2,12 @@ import streamlit as st
 import json
 import os
 import random
-import datetime
+from datetime import date, datetime
 import pandas as pd
 import csv
+from DatosUsuario import Usuario
 
-# Archivos de almacenamiento local
-USERS_FILE = "usuarios.json"
-ACTIVITIES_FILE = "actividades.json"
-SLEEP_FILE = "sueño.json"
-
-# ----------------------------- DATOS DEL USUARIO -----------------------------
-def cargar_datos(nombre_archivo):
-    if os.path.exists(nombre_archivo):
-        with open(nombre_archivo, "r") as f:
-            return json.load(f)
-    return {}
-
-def guardar_datos(nombre_archivo, datos):
-    with open(nombre_archivo, "w") as f:
-        json.dump(datos, f, indent=4)
-
-usuarios = cargar_datos(USERS_FILE)
-actividades = cargar_datos(ACTIVITIES_FILE)
-sueños = cargar_datos(SLEEP_FILE)
-
-# ----------------------------- INICIAR SESIÓN -----------------------------
+# ----------------------------- INICIAR SESIÓN PÁGINA -----------------------------
 if "pagina" not in st.session_state:
     st.session_state.pagina = "inicio"
 if "usuario_actual" not in st.session_state:
@@ -176,9 +157,31 @@ def sugerir_siestas(df_acts, ciclos_faltantes):
 
 # ----------------------------- INTERFACES -----------------------------
 
-def GenerarID():
-    return random.randint(1000, 9999)
+def GenerarID(existentes):
+    id = random.randint(1000, 9999)
+    if id not in existentes:
+                return id
 
+def GenerarIDsExistentes(archivo):
+    if not os.path.exists(archivo):
+        return set()
+    with open(archivo, 'r', newline='', encoding='utf-8') as file:
+        reader = csv.DictReader(file)
+        return {int(row['id']) for row in reader if 'id' in row}
+    
+def GuardarDatos(archivo, datos):
+    with open(archivo, "w", newline='', encoding='utf-8') as file:
+        writer = csv.DictWriter(file, fieldnames=["ID", "Nombre", "Apellido", "Gmail", "Trastorno", "Edad"])
+        writer.writeheader()
+        for nombre, info in datos.items():
+            writer.writerow({
+                "ID": info["id"],
+                "Nombre": nombre.split()[0],
+                "Apellido": nombre.split()[1] if len(nombre.split()) > 1 else "",
+                "Gmail": info["gmail"],
+                "Trastorno": info["trastorno"],
+                "Edad": info["edad"]
+            })
 
 def pagina_inicio():
     st.title("🌙 Bienvenido a SleepWell")
@@ -187,52 +190,76 @@ def pagina_inicio():
     opcion = st.radio("¿Qué deseas hacer?", ["Iniciar sesión", "Registrarse"], horizontal=True)
     st.write("")
 
+# ----------------------------- INICIAR SESIÓN / REGISTRARSE -----------------------------
+
     if opcion == "Iniciar sesión":
-        st.subheader("🔑Iniciar sesión")
+        st.subheader("🔑 Iniciar sesión")
 
         archivo = "DatosUsuarios.csv"
 
         if not os.path.exists(archivo):
             st.error("No hay usuarios registrados. Por favor, regístrate primero.")
-            return None
         else:
             id_usuario = st.text_input("ID de usuario", placeholder="Ingresa tu ID de usuario")
 
-            if not id_usuario.isdigit():
-                st.error("El ID de usuario debe ser un número")
-                return None
-            with open(archivo, "r", newline='', encoding='utf-8') as file:
-                reader = csv.DictReader(file)
-                for row in reader:
-                    if row["ID"] == id_usuario:
-                        st.session_state.usuario_actual = row["Nombre"]
-                        st.session_state.pagina = "principal"
-                        st.success(f"Bienvenido, {st.session_state.usuario_actual}!")
-                        return row
-                    else:
-                        st.error("ID de usuario no encontrado. Por favor, verifica tu ID.")
+            if st.button("Entrar"):
+                if not id_usuario:
+                    st.error("Por favor, ingresa tu ID de usuario.")
+                elif not id_usuario.isdigit():
+                    st.error("El ID de usuario debe ser un número.")
+                else:
+                    with open(archivo, "r", newline='', encoding='utf-8') as file:
+                        reader = csv.DictReader(file)
+                        usuario_encontrado = False
+
+                        for row in reader:
+                            if row["ID"] == id_usuario:
+                                st.session_state.usuario_actual = row["Nombre"]
+                                st.session_state.pagina = "principal"
+                                st.success(f"Bienvenido, {st.session_state.usuario_actual}!")
+                                usuario_encontrado = True
+                                break
+
+                        if not usuario_encontrado:
+                            st.error("ID de usuario no encontrado. Por favor, verifica tu ID.")
+
         if "usuario_actual" in st.session_state and st.session_state.usuario_actual:
             st.success(f"Ya has iniciado sesión como {st.session_state.usuario_actual}.")
 
+        st.write("¿No tienes una cuenta? Regístrate para empezar a usar SleepWell.")
+
     elif opcion == "Registrarse":
         st.subheader("📝 Crear cuenta")
-        nuevo_usuario = st.text_input("Nombre", placeholder="¿Cómo te llamas?")
+        nuevo_usuario_nombre = st.text_input("Nombre", placeholder="¿Cómo te llamas?")
+        nuevo_usuario_apellido = st.text_input("Apellido", placeholder="¿Cuál es tu apellido?")
+        nuevo_usuario = f"{nuevo_usuario_nombre} {nuevo_usuario_apellido}".strip()
+
         gmail_usuario = st.text_input("Correo electrónico", placeholder="Ingresa tu correo electrónico")
+        
+        fecha_nacimiento = st.date_input(
+        "Fecha de nacimiento",
+        min_value=date(1900, 1, 1),
+        max_value=date.today()
+        )
+        hoy = date.today()
+        edad = hoy.year - fecha_nacimiento.year - ((hoy.month, hoy.day) < (fecha_nacimiento.month, fecha_nacimiento.day))
+
         trastorno = st.selectbox("¿Padeces algún trastorno del sueño?", ["Ninguno", "Insomnio", "Apnea", "Narcolepsia", "Sonambulismo", "Sindrome de piernas inquietas", "Terrores nocturnos", "Parálisis del sueño", "Trastorno del ritmo circadiano", "Hipersomnia idiopática"])
-        edad = st.slider("Edad", 10, 100, 25)
+
         if st.button("Crear cuenta"):
-            if not nuevo_usuario or not gmail_usuario:
+            if not nuevo_usuario or not gmail_usuario or not trastorno or not edad:
                 st.error("Todos los campos son obligatorios")
             if not gmail_usuario.endswith("@gmail.com"):
                     st.error("El correo electrónico debe ser de Gmail")
-            if nuevo_usuario in usuarios:
+            if nuevo_usuario in Usuario:
                 st.error("El usuario ya existe")
             else:
                 id_usuario = GenerarID()
-                usuarios[nuevo_usuario] = {"gmail":gmail_usuario, "trastorno": trastorno, "edad": edad, "id": id_usuario}
-                guardar_datos(USERS_FILE, usuarios)
-                st.success("Cuenta creada con éxito, ahora inicia sesión")
-
+                Usuario[nuevo_usuario] = {"id": id_usuario, "gmail":gmail_usuario, "trastorno": trastorno, "edad": edad}
+                GuardarDatos("DatosUsuarios.csv", Usuario)
+                st.session_state.usuario_actual = nuevo_usuario
+                st.session_state.pagina = "principal"
+                st.success(f"Cuenta creada con éxito. Bienvenido, {nuevo_usuario}!")
 
 def pagina_principal():
     usuario = st.session_state.usuario_actual
