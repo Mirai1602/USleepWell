@@ -2,7 +2,7 @@ from datetime import datetime, timedelta
 from DatosActividad import  DocCSV
 from DatosActividad import ActividadesUsuario
 from collections import defaultdict
-#Esa bendita libreria esta buena para agrupar las actividades y crea intervalos como diccionarios
+#Esta libreria es buena para agrupar las actividades y crea intervalos como diccionarios
 import csv
 import csv
 
@@ -172,37 +172,72 @@ def RegistrarAgenda(id):
             if OpcionEliminar == 's':
                 EliminarActividad()
 
-def ConsultaAgenda(): #Se encarga de ver los huecos para determinar las siestas, pero las siestas no se calcula aqui
-     LapsoDisponibles = []
-     ActPorFecha = defaultdict(list)  # Usamos defaultdict para agrupar actividades por fecha, toma list como primer valor para no tener que estar validando
-     with open("ActividadesUsuario.csv", encoding='utf-8') as f:
-         reader = csv.reader(f)
-         encabezado = next(reader)  #Salta encabezado
-         for fila in reader: 
-             ActPorFecha[fila[2]].append(fila)
-      # Agrupa actividades por fecha, creando una clave si aun no existe como si fuera un diccionario
-             for fecha, actividades in ActPorFecha.items():
-                 #Forma de manejar los elementos en un diccionario
-                 actividades = [a for a in actividades if a[4].strip()]  # Filtra filas con hora válida
-                 actividades.sort(key=lambda x: datetime.strptime(x[4], "%H:%M"))
-                 #Se ordenan de la mas tardia a la mas temprana
-                 actual = datetime.strptime("11:00", "%H:%M")  # Hora de inicio del día, para que solo nos cuente las horas libres apratir de ahi
-                 FinDia= datetime.strptime("16:00" , "%H:%M")  # Hora de fin del día, para que solo nos cuente las horas libres hasta ahi
-                 #Solo le puse esas horas porque son las mas recomendadas para siestas, y solo esas me interesan
-                 for act in actividades:
-                     inicioAct = datetime.strptime(act[3], "%H:%M")  # Convierte la hora de la actividad a tipo date. Basicamente, pasa todos los datos del cvs a sus tipos
-                     duracion = timedelta(minutes=int(act[4]))  # Convierte la duración a un objeto timedelta, que es un intervalo de tiempo con el timpo de la actividad registrada
-                     if inicioAct > actual:
-                         lapso = (inicioAct - actual).total_seconds() / 60  # Calcula el lapso libre en minutos
-                         if lapso >= 20: #Si mi lapso de tiempo registrado es mayor o igual a 20, porque eso debe de durar en general una siesta
-                             LapsoDisponibles.append((fecha, actual.strftime("%H:%M"), inicioAct.strftime("%H:%M"), lapso))  # Guarda la fecha, hora de inicio y fin de la siesta, y el lapso libre
-                     actual= max(actual, inicioAct + duracion)  # Actualiza la hora actual al final de la actividad
-             if actual < FinDia:  # Si la hora actual es menor que la hora de fin del día
-                 lapso= (FinDia - actual).total_seconds() / 60  # Calcula el lapso libre hasta el fin del día
-                 if lapso >= 20:  # Si el lapso libre es mayor o igual a 20 minutos
-                        LapsoDisponibles.append((fecha, actual.strftime("%H:%M"), FinDia.strftime("%H:%M"), lapso))  # Guarda el lapso libre hasta el fin del día
-                        #Para que luego lo podamos leer, lo agrega a esa lista temporal
-     return LapsoDisponibles  # Retorna la lista de lapsos disponibles para siestas
+
+def ConsultaAgenda():
+    lapsos_disponibles = []
+    actividades_por_fecha = defaultdict(list)
+
+    with open("ActividadesUsuario.csv", encoding='utf-8') as f:
+        reader = csv.reader(f)
+        next(reader)  # Salta encabezado
+
+        # Agrupa actividades por fecha
+        for fila in reader:
+            fecha = fila[3].strip()  # Fecha de la actividad
+            actividades_por_fecha[fecha].append(fila)
+
+    for fecha, actividades in actividades_por_fecha.items():
+        actividades = [a for a in actividades if a[4].strip() and a[5].strip()]
+        actividades.sort(key=lambda x: datetime.strptime(x[4], "%H:%M"))
+
+        # Construye el inicio y fin del día como objetos datetime completos
+        try:
+            inicio_dia = datetime.strptime(fecha, "%d/%m/%Y") + timedelta(hours=11, minutes=30)
+            fin_dia = datetime.strptime(fecha, "%d/%m/%Y") + timedelta(hours=16)
+        except ValueError:
+            print(f"❌ Fecha inválida en el archivo: {fecha}")
+            continue
+
+        actual = inicio_dia
+
+        for act in actividades:
+            try:
+                hora_actividad = datetime.strptime(act[4], "%H:%M")
+                inicio_actividad = datetime.strptime(fecha, "%d/%m/%Y").replace(
+                    hour=hora_actividad.hour,
+                    minute=hora_actividad.minute
+                )
+                duracion = timedelta(minutes=int(act[5]))
+
+                if inicio_actividad > actual:
+                    lapso = (inicio_actividad - actual).total_seconds() / 60
+                    if lapso >= 20:
+                        lapsos_disponibles.append((
+                            fecha,
+                            actual.strftime("%H:%M"),
+                            inicio_actividad.strftime("%H:%M"),
+                            lapso
+                        ))
+
+                actual = max(actual, inicio_actividad + duracion)
+            except ValueError:
+                print(f"⚠️ Problema con los datos en: {act}")
+                continue
+
+        # Verifica si hay tiempo libre hasta el final del día
+        if actual < fin_dia:
+            lapso = (fin_dia - actual).total_seconds() / 60
+            if lapso >= 20:
+                lapsos_disponibles.append((
+                    fecha,
+                    actual.strftime("%H:%M"),
+                    fin_dia.strftime("%H:%M"),
+                    lapso
+                ))
+
+    return lapsos_disponibles
+
+
 if __name__ == "__main__":
     # Esta parte se ejecuta si el script se ejecuta directamente
     print("Bienvenido al sistema de gestión de actividades de USleepWell!")

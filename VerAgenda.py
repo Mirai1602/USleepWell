@@ -24,3 +24,4 @@ def MostrarActividades(archivo="ActividadesUsuario.csv", id=None):
 
     if not actividades_encontradas:
         print("📭 No tienes actividades registradas.")
+#MostrarActividades(id="1215")  # No como número: MostrarActividades(id=1215)

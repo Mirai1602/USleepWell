@@ -1,64 +1,66 @@
 from RegistroAgenda import ConsultaAgenda
-from datetime import datetime, timedelta
+from datetime import datetime, timedelta #Recuerden que el timedenta permite tratar las fechas como objetos
 import csv
+from collections import defaultdict
 
-def FiltroDeLapsos(lapsos):
-    SurgeSiesta = []
+def FiltroDeLapsos(lapsos): #para retomar los lapsos de las siestas que se definen en la otra funcion
+    SurgeSiesta=[]
     for fecha, inicio, fin, _ in lapsos:
-        try:
-            h_inicio = datetime.strptime(inicio, '%H:%M')
-            h_fin = datetime.strptime(fin, '%H:%M')
-            duracion = (h_fin - h_inicio).seconds / 60
-            if 13 <= h_inicio.hour < 16 and duracion >= 20:
-                SurgeSiesta.append((fecha, inicio, fin))
-        except ValueError:
-            continue
+        h_inicio = datetime.strptime(inicio, '%H:%M')
+        h_fin = datetime.strptime(fin, '%H:%M')
+        duracion = (h_fin - h_inicio).seconds / 60
+        if 13 <= h_inicio.hour < 16 and duracion >= 20:
+            SurgeSiesta.append((fecha, inicio, fin))
     return SurgeSiesta
+lapsos= ConsultaAgenda()
+recomendaciones = FiltroDeLapsos(lapsos)
+print("\n Recomendaciones de siesta:")
+for fecha, ini, fin in recomendaciones:
+    print(f" {fecha}: Siesta posible entre {ini} y {fin}")
 
 
-def HorarioSleep(id_usuario, ciclos=5):
+def HorarioSleep(ciclos=5):
     recomendaciones = []
+    fechas_registradas = set()
 
-    try:
-        with open("ActividadesUsuario.csv", encoding="UTF-8") as f:
-            reader = csv.reader(f)
-            encabezado = next(reader)  # Salta el encabezado
+    with open("ActividadesUsuario.csv", encoding="UTF-8") as f:
+        reader = csv.reader(f)
+        next(reader)
 
-            for fila in reader:
-                if fila[0] != str(id_usuario):
-                    continue  # Solo procesa actividades del usuario actual
+        for fila in reader:
+            try:
+                fecha = fila[3].strip()
+                hora_levantarse = fila[1].strip()
 
-                horaLevantarse = fila[1].strip()  # Hora de levantarse
-                dia = fila[3].strip()             # Fecha de la actividad
+                # Mostramos valor crudo para inspección
+                print(f"🔍 DEBUG — {fecha} | Hora original: {repr(hora_levantarse)}")
 
-                try:
-                    horaDespertar = datetime.strptime(horaLevantarse, "%H:%M")
-                    duracionSleep = timedelta(minutes=90 * ciclos)
-                    horaDormir = horaDespertar - duracionSleep
+                # Limpieza de caracteres ocultos
+                hora_limpia = hora_levantarse.replace("\ufeff", "").replace("\n", "").replace("\r", "").strip()
+
+                if fecha not in fechas_registradas:
+                    hora_despertar = datetime.strptime(hora_limpia, "%H:%M")
+                    duracion_sleep = timedelta(minutes=90 * ciclos)
+                    hora_dormir = hora_despertar - duracion_sleep
 
                     recomendaciones.append({
-                        "dia": dia,
-                        "levantarse": horaDespertar.strftime("%H:%M"),
-                        "dormir_ideal": horaDormir.strftime("%H:%M"),
+                        "fecha": fecha,
+                        "levantarse": hora_despertar.strftime("%H:%M"),
+                        "dormir_ideal": hora_dormir.strftime("%H:%M"),
                         "ciclos": ciclos
                     })
-                except ValueError:
-                    print(f"❌ Formato de hora inválido en el registro: {horaLevantarse}")
 
-    except FileNotFoundError:
-        print("❌ No se encontró el archivo de actividades.")
-        return []
+                    fechas_registradas.add(fecha)
+
+            except ValueError as e:
+                print(f"❌ ERROR al convertir '{repr(hora_levantarse)}' en {fecha} → {e}")
 
     return recomendaciones
-
-# Solo para pruebas directas
 if __name__ == "__main__":
-    lapsos = ConsultaAgenda()
-    recomendaciones = FiltroDeLapsos(lapsos)
-    print("\n🛌 Recomendaciones de siesta:")
-    for fecha, ini, fin in recomendaciones:
-        print(f"📅 {fecha}: Siesta posible entre {ini} y {fin}")
-
+    recomendaciones = HorarioSleep()
     print("\n🌙 Recomendaciones de sueño nocturno:")
-    for r in HorarioSleep():
-        print(f"{r['dia']}: Dormir idealmente a las {r['dormir_ideal']} para levantarse a las {r['levantarse']}")
+    if recomendaciones:
+        for rec in recomendaciones:
+            print(f"📅 {rec['fecha']} — 🛌 Dormir ideal: {rec['dormir_ideal']} | 🕒 Levantarse: {rec['levantarse']} | 🌀 Ciclos: {rec['ciclos']}")
+    else:
+        print("📭 No se encontraron datos suficientes para calcular recomendaciones.")

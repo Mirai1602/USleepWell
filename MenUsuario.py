@@ -1,11 +1,11 @@
-from RegistroAgenda import RegistrarAgenda
+from RegistroAgenda import RegistrarAgenda, ConsultaAgenda, EditarActividad, EliminarActividad
 from VerAgenda import MostrarActividades
-from RutinaSleep import HorarioSleep
+from RutinaSleep import HorarioSleep, FiltroDeLapsos
 
-def MenUsuario(id, nombre_usuario):
+def MenUsuario(id, nombre):
     while True:
         print("\n" + "=" * 50)
-        print(f"👤 Bienvenido, {nombre_usuario} (ID: {id})")
+        print(f"👤 Bienvenido, {nombre} (ID: {id})")
         print("Selecciona una opción:")
         print("1. Registrar actividad")
         print("2. Mostrar agenda")
@@ -34,15 +34,13 @@ def MenUsuario(id, nombre_usuario):
             else:
                 print("📭 No se encontraron lapsos ideales para siesta.")
         elif opcion == "6":
-            recomendaciones = HorarioSleep(id)
+            recomendaciones = HorarioSleep()
             print("\n🌙 Recomendaciones de sueño nocturno:")
             if recomendaciones:
-                for r in recomendaciones:
-                    print(f"{r['dia']}: Dormir idealmente a las {r['dormir_ideal']} para levantarse a las {r['levantarse']}")
+                for rec in recomendaciones:
+                    print(f"📅 {rec['fecha']} — 🛌 Dormir ideal: {rec['dormir_ideal']} | 🕒 Levantarse: {rec['levantarse']} | 🌀 Ciclos: {rec['ciclos']}")
             else:
                 print("📭 No se encontraron datos suficientes para calcular recomendaciones.")
-        elif opcion == "0":
-            print("👋 Cerrando sesión. ¡Hasta pronto!")
-            break
+
         else:
             print("❌ Opción inválida. Intenta de nuevo.")
