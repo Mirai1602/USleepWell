@@ -107,8 +107,13 @@ def pagina_inicio():
                 "edad": edad,
                 "trastorno": trastorno
             }])
-            guardar_datos(nuevo_usuario, usuarios_doc)
-            st.success(f"Cuenta creada exitosamente. Tu ID es: {nuevo_id}. Guárdalo para iniciar sesión.")
+            if nombre == "" or apellido == "" or gmail == "":
+                st.error("Por favor completa todos los campos.")
+            elif "@" not in gmail:
+                st.error("Debes ingresar un correo electrónico válido.")
+            else:
+                guardar_datos(nuevo_usuario, usuarios_doc)
+                st.success(f"Cuenta creada exitosamente. Tu ID es: {nuevo_id}. Guárdalo para iniciar sesión.")
 
 # ----------------------------- Sugerir siesta -----------------------------
 
@@ -207,9 +212,12 @@ def pagina_principal():
                 "inicio": inicio,
                 "fin": fin
             }])
-            actividades_df = pd.concat([actividades_df, nueva], ignore_index=True)
-            guardar_datos(actividades_df, actividades_doc)
-            st.success("Actividad guardada correctamente")
+            if actividad == "":
+                st.error("Por favor ingresa una actividad.")
+            else:
+                actividades_df = pd.concat([actividades_df, nueva], ignore_index=True)
+                guardar_datos(actividades_df, actividades_doc)
+                st.success("Actividad guardada correctamente")
     
     elif menu == "Editar o eliminar actividades":
         st.header("✏️ Modificar o eliminar actividades")
@@ -221,7 +229,14 @@ def pagina_principal():
             seleccion = st.selectbox("Selecciona una actividad:", actividades_usuario.index, format_func=lambda x: f"{actividades_usuario.loc[x, 'fecha']} - {actividades_usuario.loc[x, 'actividad']}")
 
             if st.button("Eliminar actividad seleccionada"):
-                idx_to_drop = actividades_usuario.loc[seleccion].name
+                fila = actividades_usuario.loc[seleccion]
+                idx_to_drop = actividades_df[
+                    (actividades_df["id"] == usuario_id) &
+                    (actividades_df["fecha"] == fila["fecha"]) &
+                    (actividades_df["actividad"] == fila["actividad"]) &
+                    (actividades_df["inicio"] == fila["inicio"]) &
+                    (actividades_df["fin"] == fila["fin"])
+                ].index
                 actividades_df = actividades_df.drop(idx_to_drop)
                 guardar_datos(actividades_df, actividades_doc)
                 st.success("Actividad eliminada exitosamente.")
