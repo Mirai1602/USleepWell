@@ -117,43 +117,63 @@ def sugerir_siestas(actividades_user, ciclos_faltantes):
         st.info("No hay actividades registradas hoy. Puedes tomar una siesta entre 13:00 y 16:00 si lo deseas.")
         return
 
-    hoy = pd.to_datetime(datetime.date.today())
+    hoy = datetime.date.today()
     actividades_user["fecha"] = pd.to_datetime(actividades_user["fecha"], errors="coerce")
-    actividades_hoy = actividades_user[actividades_user["fecha"] == hoy]
+    actividades_hoy = actividades_user[actividades_user["fecha"].dt.date == hoy]
 
     if actividades_hoy.empty:
         st.info("No tienes actividades programadas hoy. Considera tomar una siesta entre 13:00 y 16:00.")
         return
 
     st.subheader("🕒 Sugerencias de siestas")
-    actividades_hoy = actividades_hoy.sort_values("inicio")
 
     actividades_hoy["inicio"] = pd.to_datetime(actividades_hoy["inicio"], format="%H:%M:%S", errors="coerce")
     actividades_hoy["fin"] = pd.to_datetime(actividades_hoy["fin"], format="%H:%M:%S", errors="coerce")
+    actividades_hoy = actividades_hoy.sort_values("inicio").dropna()
+
+    inicio_dia = datetime.datetime.combine(hoy, datetime.time(6, 0))
+    fin_dia = datetime.datetime.combine(hoy, datetime.time(20, 0))
 
     huecos = []
+
+    if not actividades_hoy.empty:
+        primera_inicio = actividades_hoy.iloc[0]["inicio"]
+        if (primera_inicio - inicio_dia).total_seconds() >= 30 * 60:
+            huecos.append((inicio_dia.time(), primera_inicio.time()))
+
     for i in range(len(actividades_hoy) - 1):
         fin_actual = actividades_hoy.iloc[i]["fin"]
-        inicio_siguiente = actividades_hoy.iloc[i+1]["inicio"]
-        duracion = (inicio_siguiente - fin_actual).total_seconds() / 60
-        if duracion >= 30:
+        inicio_siguiente = actividades_hoy.iloc[i + 1]["inicio"]
+        if (inicio_siguiente - fin_actual).total_seconds() >= 30 * 60:
             huecos.append((fin_actual.time(), inicio_siguiente.time()))
 
+    ultima_fin = actividades_hoy.iloc[-1]["fin"]
+    if (fin_dia - ultima_fin).total_seconds() >= 30 * 60:
+        huecos.append((ultima_fin.time(), fin_dia.time()))
+
     if huecos:
-        st.success("Aquí tienes algunos espacios disponibles para una siesta de 30 a 90 minutos:")
+        st.success("Aquí tienes espacios disponibles para una siesta de al menos 30 minutos:")
         for inicio, fin in huecos[:ciclos_faltantes]:
             st.markdown(f"- 💤 {inicio.strftime('%H:%M')} a {fin.strftime('%H:%M')}")
     else:
-        st.warning("No hay espacios disponibles hoy para sugerir siestas entre tus actividades.")
+        st.warning("No se encontraron huecos disponibles hoy para una siesta.")
 
 # ----------------------------- PÁGINA PRINCIPAL -----------------------------
 
 def pagina_principal():
+    usuario_df = cargar_datos(usuarios_doc)
+    actividades_df = cargar_datos(actividades_doc)
+    sueño_df = cargar_datos(sueño_doc)
+
     usuario_id = st.session_state.usuario_id
 
-    menu = st.sidebar.radio("Menú", ["Registrar Actividad", "Registrar Sueño", "Calendario y Recomendaciones", "Ver actividades"])
+    menu = st.sidebar.radio("Menú", [
+                 "Registrar Actividad", "Registrar Sueño", 
+                 "Calendario y Recomendaciones", "Ver actividades", 
+                 "Editar o eliminar actividades", "Reestablecer historial de sueño"
+                 ])
 
-    user_info = usuario[usuario["id"] == st.session_state.usuario_id].iloc[0]
+    user_info = usuario_df[usuario_df["id"] == usuario_id].iloc[0]
     nombre = user_info["nombre"]
     trastorno = user_info["trastorno"]
 
@@ -187,9 +207,60 @@ def pagina_principal():
                 "inicio": inicio,
                 "fin": fin
             }])
-            actividades_actualizadas = pd.concat([actividades, nueva], ignore_index=True)
-            guardar_datos(actividades_actualizadas, actividades_doc)
+            actividades_df = pd.concat([actividades_df, nueva], ignore_index=True)
+            guardar_datos(actividades_df, actividades_doc)
             st.success("Actividad guardada correctamente")
+    
+    elif menu == "Editar o eliminar actividades":
+        st.header("✏️ Modificar o eliminar actividades")
+        actividades_usuario = actividades_df[actividades_df["id"] == usuario_id]
+        if actividades_usuario.empty:
+            st.info("No tienes actividades registradas para editar o eliminar.")
+        else:
+            actividades_usuario = actividades_usuario.reset_index(drop=True)
+            seleccion = st.selectbox("Selecciona una actividad:", actividades_usuario.index, format_func=lambda x: f"{actividades_usuario.loc[x, 'fecha']} - {actividades_usuario.loc[x, 'actividad']}")
+
+            if st.button("Eliminar actividad seleccionada"):
+                idx_to_drop = actividades_usuario.loc[seleccion].name
+                actividades_df = actividades_df.drop(idx_to_drop)
+                guardar_datos(actividades_df, actividades_doc)
+                st.success("Actividad eliminada exitosamente.")
+                
+            st.subheader("Modificar actividad")
+            nueva_fecha = st.date_input("Nueva fecha", value=pd.to_datetime(actividades_usuario.loc[seleccion, "fecha"]).date())
+            nueva_act = st.text_input("Nuevo nombre de actividad", value=actividades_usuario.loc[seleccion, "actividad"])
+            nuevo_inicio = st.slider(
+                "Nueva hora de inicio",
+                min_value=datetime.time(0, 0),
+                max_value=datetime.time(23, 59),
+                value=pd.to_datetime(actividades_usuario.loc[seleccion, "inicio"]).time(),
+                step=datetime.timedelta(minutes=1)
+            )
+            nuevo_fin = st.slider(
+                "Nueva hora de fin",
+                min_value=datetime.time(0, 0),
+                max_value=datetime.time(23, 59),
+                value=pd.to_datetime(actividades_usuario.loc[seleccion, "fin"]).time(),
+                step=datetime.timedelta(minutes=1)
+            )
+
+            if st.button("Guardar cambios"):
+                idx = actividades_usuario.loc[seleccion].name
+                actividades_df.at[idx, "fecha"] = nueva_fecha
+                actividades_df.at[idx, "actividad"] = nueva_act
+                actividades_df.at[idx, "inicio"] = nuevo_inicio
+                actividades_df.at[idx, "fin"] = nuevo_fin
+                guardar_datos(actividades_df, actividades_doc)
+                st.success("Actividad modificada exitosamente.")
+
+    elif menu == "Reestablecer historial de sueño":
+        st.header("🧹 Reestablecer historial de sueño")
+        if st.button("Eliminar todos los registros de sueño"):
+            sueño_eliminar = sueño_df[sueño_df["id"] != usuario_id]
+            guardar_datos(sueño_eliminar, sueño_doc)
+            st.success("Historial de sueño eliminado correctamente.")
+            sueño = cargar_datos(sueño_doc)
+
 
     elif menu == "Registrar Sueño":
         st.header("🛌 Registrar horas de sueño")
@@ -216,14 +287,14 @@ def pagina_principal():
                 "dormir": dormir,
                 "despertar": despertar
             }])
-            sueño_actualizado = pd.concat([sueño, nuevo], ignore_index=True)
+            sueño_actualizado = pd.concat([sueño_df, nuevo], ignore_index=True)
             guardar_datos(sueño_actualizado, sueño_doc)
             st.success("Sueño registrado correctamente")
 
     elif menu == "Ver actividades":
         st.header("📊 Actividades registradas")
-        if "id" in actividades.columns:
-            act_user = actividades[actividades["id"] == st.session_state.usuario_id]
+        if "id" in actividades_df.columns:
+            act_user = actividades_df[actividades_df["id"] == st.session_state.usuario_id]
 
             if not act_user.empty:
                 act_user['fecha'] = pd.to_datetime(act_user['fecha'], errors='coerce')
@@ -237,8 +308,8 @@ def pagina_principal():
     elif menu == "Calendario y Recomendaciones":
         st.header("📆 Historial y ciclos de sueño")
 
-        if "id" in sueño.columns:
-            sueño_user = sueño[sueño["id"] == st.session_state.usuario_id]
+        if "id" in sueño_df.columns:
+            sueño_user = sueño_df[sueño_df["id"] == st.session_state.usuario_id]
         else:
             sueño_user = pd.DataFrame()
 
@@ -247,8 +318,8 @@ def pagina_principal():
         else:
             st.subheader("📄 Historial de sueño")
             historial = []
-        
             ciclos_dormidos = 0
+
             for _, row in sueño_user.iterrows():
                 fecha = row["fecha"]
                 dormir = datetime.datetime.strptime(row['dormir'], "%H:%M:%S")
@@ -256,6 +327,7 @@ def pagina_principal():
 
                 if despertar < dormir:
                     despertar += datetime.timedelta(days=1)
+
                 duracion = (despertar - dormir).total_seconds() / 60
                 ciclos = int(duracion // 90)
                 ciclos_dormidos += ciclos
@@ -280,24 +352,25 @@ def pagina_principal():
             st.header("🌀 Ciclos de sueño")
             completados = min(ciclos_dormidos, 7)
             faltantes = max(0, 7 - completados)
+
             st.metric("Ciclos completados", f"{completados}/7")
             st.progress(completados / 7)
 
             if ciclos_dormidos < 7:
                 st.warning("No completaste los ciclos ideales. Se recomiendan siestas de 90 minutos.")
-                actividades_user = actividades[actividades["id"] == usuario_id] if "id" in actividades.columns else pd.DataFrame()
+                actividades_user = actividades_df[actividades_df["id"] == usuario_id] if "id" in actividades_df.columns else pd.DataFrame()
                 sugerir_siestas(actividades_user, faltantes)
 
         st.header("💡 Recomendaciones")
         recomendaciones = recomendaciones_generales.copy()
 
-        user_info = usuario[usuario["id"] == st.session_state.usuario_id].iloc[0]
+        user_info = usuario_df[usuario_df["id"] == st.session_state.usuario_id].iloc[0]
         trastorno = user_info["trastorno"]
 
         if trastorno.lower() in recomendaciones_trastornos:
             recomendaciones += recomendaciones_trastornos[trastorno.lower()]
 
-        recomendaciones_mostrar = random.sample(recomendaciones, 5)
+        recomendaciones_mostrar = random.sample(recomendaciones, min(3, len(recomendaciones)))
         for rec in recomendaciones_mostrar:
             st.markdown(f"- {rec}")
 
