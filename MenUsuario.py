@@ -41,6 +41,8 @@ def MenUsuario(id, nombre):
                     print(f"📅 {rec['fecha']} — 🛌 Dormir ideal: {rec['dormir_ideal']} | 🕒 Levantarse: {rec['levantarse']} | 🌀 Ciclos: {rec['ciclos']}")
             else:
                 print("📭 No se encontraron datos suficientes para calcular recomendaciones.")
-
+        elif opcion == "0":
+            print("👋 Cerrando sesión...")
+            break
         else:
             print("❌ Opción inválida. Intenta de nuevo.")
